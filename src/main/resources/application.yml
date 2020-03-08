@@ -1,0 +1,25 @@
+## 공통 default 설정 부분, active에 따라 local or prod 실행
+##정적 리소스 자동 갱신 false
+spring:
+  devtools:
+    restart:
+      enabled: false
+    livereload:
+      enabled: false
+  profiles:
+    active: dev
+  application:
+    name: chatAgent
+
+  ##java.lang.IllegalStateException: Failed to load ApplicationContext 에러 해결
+  main:
+    allow-bean-definition-overriding: true
+
+ #Activemq 설정
+  activemq:
+    broker-url: ssl://###
+    user: ###
+    password: ###
+
+  jpa:
+    show-sql: false

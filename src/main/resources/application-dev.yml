@@ -1,0 +1,19 @@
+spring:
+  profiles: dev
+  datasource:
+    hikari:
+      jdbc-url: jdbc:mariadb://###/applehipdev
+      username: ###
+      password: ###
+      driver-class-name: org.mariadb.jdbc.Driver
+  devtools:
+    restart:
+      enabled: true
+    livereload:
+      enabled: true
+  main:
+    allow-bean-definition-overriding: true
+chat:
+  queue:
+    size: "5"
+    prefix: AP_CHAT

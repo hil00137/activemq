@@ -1,0 +1,37 @@
+##정적 리소스 자동 갱신 true
+spring:
+  devtools:
+    restart:
+      enabled: true
+    livereload:
+      enabled: true
+  profiles: local
+
+  ## h2 db 추가
+  h2:
+    console:
+      enabled: true
+
+  ##jpa sql 보여주는 설정
+  ##콘솔에 출력되는 sql을 가독성 있게 해줌
+  ##h2 DB의 sql 엔진을 Mysql InnoDB엔진으로 출력
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQL5InnoDBDialect
+
+## 쿼리에 매핑되는 값 확인
+logging:
+  level:
+    org:
+      hibernate:
+        type:
+          descriptor:
+            sql: trace
+
+chat:
+  queue:
+    size: "5"
+    prefix: TEST_AP_CHAT
