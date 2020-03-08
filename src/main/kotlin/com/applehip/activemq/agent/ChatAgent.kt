@@ -1,31 +1,49 @@
 package com.applehip.activemq.agent
 
 import org.slf4j.LoggerFactory
-import kotlin.random.Random
+import javax.jms.*
 
 class ChatAgent(val queueName : String) : Thread() {
 
     val logger = LoggerFactory.getLogger(this::class.java)
     var alive = false
+    var session : QueueSession? = null
+    var receiver : QueueReceiver? = null
+
+    companion object {
+        var connection : QueueConnection? = null
+    }
 
     /**
-     * 샘플 Agent
+     * 실제 ActiveMq Agent
      */
     override fun run() {
         try {
-            var count = 0
-            val max = Random.nextInt(10, 20)
-            logger.info("max : $max")
+            session = connection?.createQueueSession(false, Session.CLIENT_ACKNOWLEDGE)
+            val queue = session?.createQueue(queueName)
+            receiver = session?.createReceiver(queue)
+
             while(true) {
-                alive = true
-                sleep(1000)
-                count++
-                logger.debug("$queueName is alive")
-                if(count == max) {
-                    throw Exception()
+                if(receiver == null) {
+                    break
                 }
+                alive = true
+                val message = receiver!!.receiveNoWait()
+                if(message == null) {
+                    sleep(100)
+                    continue
+                }
+
+                val mapMessage = message as MapMessage
+                logger.info("${mapMessage.getString("requestId")} in ${mapMessage.getString("roomId")}")
+                message.acknowledge()
+                logger.debug("$queueName is alive")
             }
         } catch (exception : Exception) {
+            receiver?.close()
+            receiver = null
+            session?.close()
+            session = null
             alive = false
             logger.error("$queueName : "+exception.message)
         }
