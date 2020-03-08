@@ -1,4 +1,4 @@
-package com.service.applehip.domain.chat
+package com.applehip.activemq.domain
 
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.annotation.LastModifiedDate
