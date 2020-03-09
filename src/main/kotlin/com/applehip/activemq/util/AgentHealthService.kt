@@ -3,12 +3,16 @@ package com.applehip.activemq.util
 import com.applehip.activemq.agent.ChatAgent
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.jms.core.JmsTemplate
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.util.concurrent.ConcurrentHashMap
+import javax.jms.QueueConnectionFactory
 
 @Component
-class AgentHealthService {
+class AgentHealthService(
+        private var jmsTemplate: JmsTemplate
+) {
 
     @Value(value = "\${chat.queue.size}")
     private lateinit var queueSize : String
@@ -28,11 +32,17 @@ class AgentHealthService {
     @Scheduled(cron = "0/1 * * * * *")
     fun checkAgent() {
         val size = this.getQueueSize()
+
+        if(ChatAgent.connection == null) {
+            val factory = jmsTemplate.connectionFactory as QueueConnectionFactory
+            ChatAgent.connection = factory.createQueueConnection().also { it.start() }
+        }
+
         for ( i in 0 until size) {
             val a = list["$i"]
             if(a == null || !a.alive) {
-                list["$i"] = ChatAgent("${queuePrefix}_$i").also { it.start() }
-                logger.info("$i 생성")
+                list["$i"] = ChatAgent(queueName = "${queuePrefix}_$i").also { it.start() }
+                logger.info("$i Agent Down, $i Agent Create")
                 continue
             }
         }

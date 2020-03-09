@@ -17,3 +17,7 @@ chat:
   queue:
     size: "5"
     prefix: AP_CHAT
+
+## 로컬에서 띄울때 8080과 겹침방지
+server:
+  port: 8070
