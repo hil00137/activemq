@@ -1,6 +1,7 @@
 package com.applehip.activemq.util
 
 import com.applehip.activemq.agent.ChatAgent
+import com.applehip.activemq.domain.ChatRoomInfoRepository
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.jms.core.JmsTemplate
@@ -11,7 +12,8 @@ import javax.jms.QueueConnectionFactory
 
 @Component
 class AgentHealthService(
-        private var jmsTemplate: JmsTemplate
+        private var jmsTemplate: JmsTemplate,
+        private var chatRoomInfoRepository: ChatRoomInfoRepository
 ) {
 
     @Value(value = "\${chat.queue.size}")
@@ -24,6 +26,7 @@ class AgentHealthService(
     companion object {
         val logger = LoggerFactory.getLogger(this::class.java)
         val list = ConcurrentHashMap<String, ChatAgent>()
+        var count = 0
     }
 
     /**
@@ -41,12 +44,19 @@ class AgentHealthService(
         for ( i in 0 until size) {
             val a = list["$i"]
             if(a == null || !a.alive) {
-                list["$i"] = ChatAgent(queueName = "${queuePrefix}_$i").also { it.start() }
-                logger.info("$i Agent Down, $i Agent Create")
+                val agent = ChatAgent(
+                        queueName = "${queuePrefix}_$i",
+                        chatRoomInfoRepository = chatRoomInfoRepository)
+                list["$i"] = agent.also { it.start() }
+                logger.info("${queuePrefix}_$i Agent Create")
                 continue
             }
         }
-        logger.info("==========================")
-        logger.info("size : ${list.size}")
+
+        if(count == 0) {
+            logger.info("Agent Health Service Active")
+            count = 10
+        }
+        count--
     }
 }
