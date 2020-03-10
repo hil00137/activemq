@@ -13,7 +13,7 @@ import javax.jms.QueueConnectionFactory
 @Service
 class AgentHealthService(
         private var jmsTemplate: JmsTemplate,
-        private var chatRoomInfoRepository: ChatRoomInfoRepository
+        private var chatService : ChatService
 ) {
 
     @Value(value = "\${chat.queue.size}")
@@ -46,7 +46,7 @@ class AgentHealthService(
             if(a == null || !a.alive) {
                 val agent = ChatAgent(
                         queueName = "${queuePrefix}_$i",
-                        chatRoomInfoRepository = chatRoomInfoRepository)
+                        chatService = chatService)
                 list["$i"] = agent.also { it.start() }
                 logger.info("${queuePrefix}_$i Agent Create")
                 continue

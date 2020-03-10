@@ -1,16 +1,14 @@
 package com.applehip.activemq.agent
 
-import com.applehip.activemq.domain.ChatRoomInfo
-import com.applehip.activemq.domain.ChatRoomInfoRepository
+import com.applehip.activemq.service.ChatService
 import org.slf4j.LoggerFactory
 import javax.jms.*
 
 class ChatAgent(
         val queueName : String,
-        val chatRoomInfoRepository : ChatRoomInfoRepository
+        private val chatService: ChatService
 ) : Thread() {
 
-    val logger = LoggerFactory.getLogger(this::class.java)
     var alive = false
     var jobFlag = false
     var session : QueueSession? = null
@@ -21,6 +19,7 @@ class ChatAgent(
 
     companion object {
         var connection : QueueConnection? = null
+        private val logger = LoggerFactory.getLogger(this::class.java)
     }
 
     /**
@@ -176,15 +175,7 @@ class ChatAgent(
     /**
      * 방번호를 이용하여 ChatRoomInfo를 가져옴.
      */
-    private fun checkRoom(roomId : Long): ChatRoomInfo? {
-        val optional = this.chatRoomInfoRepository.findById(roomId)
-        return if(optional.isPresent) {
-            optional.get()
-        } else {
-            null
-        }
-    }
-
+    private fun checkRoom(roomId : Long) = this.chatService.getRoomInfo(roomId)
 
     /**
      * 해당 방에 참여되있는 유저인지 확인
