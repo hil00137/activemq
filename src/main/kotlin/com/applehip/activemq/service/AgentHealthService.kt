@@ -1,4 +1,4 @@
-package com.applehip.activemq.util
+package com.applehip.activemq.service
 
 import com.applehip.activemq.agent.ChatAgent
 import com.applehip.activemq.domain.ChatRoomInfoRepository
@@ -6,11 +6,11 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.jms.core.JmsTemplate
 import org.springframework.scheduling.annotation.Scheduled
-import org.springframework.stereotype.Component
+import org.springframework.stereotype.Service
 import java.util.concurrent.ConcurrentHashMap
 import javax.jms.QueueConnectionFactory
 
-@Component
+@Service
 class AgentHealthService(
         private var jmsTemplate: JmsTemplate,
         private var chatRoomInfoRepository: ChatRoomInfoRepository
