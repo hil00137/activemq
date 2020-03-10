@@ -26,6 +26,7 @@ class ChatAgent(
      * 실제 ActiveMq Agent
      */
     override fun run() {
+        currentThread().name = queueName
         try {
             // Connection Check
             if(connection == null) {
@@ -34,15 +35,15 @@ class ChatAgent(
 
             // Session Check
             session = connection?.createQueueSession(false, Session.CLIENT_ACKNOWLEDGE)?:throw Exception("Session Create Fail")
-            logger.info("[$queueName] : Session Create Success")
+            logger.info("Session Create Success")
 
             // Queue Check
             val queue = session?.createQueue(queueName) ?: throw Exception("Queue Create Fail")
-            logger.info("[$queueName] : Queue Create Success")
+            logger.info("Queue Create Success")
 
             // Receiver check
             receiver = session?.createReceiver(queue)?:throw Exception("Receiver Create Fail")
-            logger.info("[$queueName] : Receiver Create Success")
+            logger.info("Receiver Create Success")
 
             while(true) {
                 this.alive = true
@@ -50,7 +51,7 @@ class ChatAgent(
                 if(message == null) {
                     // 작업이 일어났을 경우에만 합 출력
                     if(this.jobFlag) {
-                        logger.info("[$queueName] = Read : $totalCount , Fail : $failCount, Input : $successCount ")
+                        logger.info("Read : $totalCount , Fail : $failCount, Input : $successCount ")
                     }
                     this.resetCount()
                     sleep(100)
@@ -120,15 +121,15 @@ class ChatAgent(
                 // 8. 실질적으로 insert 하는 부분
                 logger.info("${message.getString("requestId")} in ${message.getString("roomId")}")
                 message.acknowledge()
-                logger.debug("$queueName is alive")
             }
         } catch (exception : Exception) {
+            logger.error(exception.message)
+        } finally {
             receiver?.close()
             receiver = null
             session?.close()
             session = null
             alive = false
-            logger.error("[$queueName] : "+exception.message)
         }
     }
 
