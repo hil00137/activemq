@@ -1,12 +1,12 @@
 package com.applehip.activemq.agent
 
-import com.applehip.activemq.service.ChatService
+import com.applehip.activemq.service.ReceiveChatService
 import org.slf4j.LoggerFactory
 import javax.jms.*
 
 class ChatAgent(
         val queueName : String,
-        private val chatService: ChatService
+        private val chatService: ReceiveChatService
 ) : Thread() {
 
     var alive = false
@@ -16,6 +16,7 @@ class ChatAgent(
     var totalCount : Int = 0
     var failCount : Int = 0
     var successCount : Int = 0
+    var retryCount : Int = 0
 
     companion object {
         var connection : QueueConnection? = null
@@ -119,6 +120,16 @@ class ChatAgent(
 
                 successCount++
                 // 8. 실질적으로 insert 하는 부분
+                try {
+                    this.chatService.saveChatMessage(message, roomInfo)
+                } catch (exception : Exception) {
+                    logger.error(exception.message)
+                    this.retryCount++
+                    // 3번 시도후 실패하면 ack 를 보냄 (큐에 걸리는걸 방지)
+                    if(this.retryCount == 3) message.acknowledge()
+                    break
+                }
+                this.retryCount = 0  // retryCount 초기화
                 logger.info("${message.getString("requestId")} in ${message.getString("roomId")}")
                 message.acknowledge()
             }

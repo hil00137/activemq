@@ -59,4 +59,13 @@ class AgentHealthService(
         }
         count--
     }
+
+    fun aliveCheck(index : Int) : String {
+        val agent = list[index.toString()] ?: return "$index does not registered"
+        return if(agent.isAlive) {
+            "$index is Alive"
+        } else {
+            "$index is Down. Waiting Please"
+        }
+    }
 }
