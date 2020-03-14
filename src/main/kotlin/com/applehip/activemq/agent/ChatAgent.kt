@@ -1,16 +1,14 @@
 package com.applehip.activemq.agent
 
-import com.applehip.activemq.domain.ChatRoomInfo
-import com.applehip.activemq.domain.ChatRoomInfoRepository
+import com.applehip.activemq.service.ReceiveChatService
 import org.slf4j.LoggerFactory
 import javax.jms.*
 
 class ChatAgent(
         val queueName : String,
-        val chatRoomInfoRepository : ChatRoomInfoRepository
+        private val chatService: ReceiveChatService
 ) : Thread() {
 
-    val logger = LoggerFactory.getLogger(this::class.java)
     var alive = false
     var jobFlag = false
     var session : QueueSession? = null
@@ -18,15 +16,18 @@ class ChatAgent(
     var totalCount : Int = 0
     var failCount : Int = 0
     var successCount : Int = 0
+    var retryCount : Int = 0
 
     companion object {
         var connection : QueueConnection? = null
+        private val logger = LoggerFactory.getLogger(this::class.java)
     }
 
     /**
      * 실제 ActiveMq Agent
      */
     override fun run() {
+        currentThread().name = queueName
         try {
             // Connection Check
             if(connection == null) {
@@ -35,15 +36,15 @@ class ChatAgent(
 
             // Session Check
             session = connection?.createQueueSession(false, Session.CLIENT_ACKNOWLEDGE)?:throw Exception("Session Create Fail")
-            logger.info("[$queueName] : Session Create Success")
+            logger.info("Session Create Success")
 
             // Queue Check
             val queue = session?.createQueue(queueName) ?: throw Exception("Queue Create Fail")
-            logger.info("[$queueName] : Queue Create Success")
+            logger.info("Queue Create Success")
 
             // Receiver check
             receiver = session?.createReceiver(queue)?:throw Exception("Receiver Create Fail")
-            logger.info("[$queueName] : Receiver Create Success")
+            logger.info("Receiver Create Success")
 
             while(true) {
                 this.alive = true
@@ -51,7 +52,7 @@ class ChatAgent(
                 if(message == null) {
                     // 작업이 일어났을 경우에만 합 출력
                     if(this.jobFlag) {
-                        logger.info("[$queueName] = Read : $totalCount , Fail : $failCount, Input : $successCount ")
+                        logger.info("Read : $totalCount , Fail : $failCount, Input : $successCount ")
                     }
                     this.resetCount()
                     sleep(100)
@@ -119,17 +120,27 @@ class ChatAgent(
 
                 successCount++
                 // 8. 실질적으로 insert 하는 부분
+                try {
+                    this.chatService.saveChatMessage(message, roomInfo)
+                } catch (exception : Exception) {
+                    logger.error(exception.message)
+                    this.retryCount++
+                    // 3번 시도후 실패하면 ack 를 보냄 (큐에 걸리는걸 방지)
+                    if(this.retryCount == 3) message.acknowledge()
+                    break
+                }
+                this.retryCount = 0  // retryCount 초기화
                 logger.info("${message.getString("requestId")} in ${message.getString("roomId")}")
                 message.acknowledge()
-                logger.debug("$queueName is alive")
             }
         } catch (exception : Exception) {
+            logger.error(exception.message)
+        } finally {
             receiver?.close()
             receiver = null
             session?.close()
             session = null
             alive = false
-            logger.error("[$queueName] : "+exception.message)
         }
     }
 
@@ -176,15 +187,7 @@ class ChatAgent(
     /**
      * 방번호를 이용하여 ChatRoomInfo를 가져옴.
      */
-    private fun checkRoom(roomId : Long): ChatRoomInfo? {
-        val optional = this.chatRoomInfoRepository.findById(roomId)
-        return if(optional.isPresent) {
-            optional.get()
-        } else {
-            null
-        }
-    }
-
+    private fun checkRoom(roomId : Long) = this.chatService.getRoomInfo(roomId)
 
     /**
      * 해당 방에 참여되있는 유저인지 확인
